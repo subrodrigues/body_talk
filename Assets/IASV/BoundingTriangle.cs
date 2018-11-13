@@ -44,8 +44,6 @@ public class BoundingTriangle:MonoBehaviour {
        
     }
 
-
-
     /**
 	 * Method that prints the objs world coordinates to the console
 	 */
