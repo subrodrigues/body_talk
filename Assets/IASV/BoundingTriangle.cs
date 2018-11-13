@@ -1,77 +1,74 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using System.Collections; 
+using System.Collections.Generic; 
+using UnityEngine; 
 
-public class BoundingTriangle : MonoBehaviour {
-	public GameObject leftHandObj, rightHandObj, headObj;
-	private GameObject mGoTriangle;
+public class BoundingTriangle:MonoBehaviour {
+    public GameObject mLeftHandObj, mRightHandObj, mHeadObj; 
+    private GameObject mBoundingTriangle; 
+    private bool isBoundingTriangleVisible; 
 
-	Vector3[] newVertices;
-	Vector2[] newUV;
-	int[] newTriangles;
+    void Start() {
+        init(); 
+    }
 
-	void Start(){
-		Vector2[] vertices = new Vector2[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1)};
-		ushort[] triangles = new ushort[] { 0, 1, 2 };
+    void init() {
+        // Initialize game objects
+        mBoundingTriangle = new GameObject("Bounding Triangle"); 
+        mBoundingTriangle.AddComponent < MeshFilter > (); 
+        mBoundingTriangle.AddComponent < MeshRenderer > (); 
 
-		DrawPolygon2D(vertices, triangles, Color.red);
-	}
+        // Initialize logic variables
+        isBoundingTriangleVisible = false; 
+    }
 
-	void DrawPolygon2D(Vector2[] vertices, ushort[] triangles, Color color) {
-		GameObject polygon = new GameObject("Bounding Triangle"); //create a new game object
-		SpriteRenderer sr = polygon.AddComponent<SpriteRenderer>(); // add a sprite renderer
-		Texture2D texture = new Texture2D(1025, 1025); // create a texture larger than your maximum polygon size
+    // Update is called once per frame
+    void Update() {
+       CheckBoundingTriangleVisibility(); 
+       
+    }
 
-		// create an array and fill the texture with your color
-		List<Color> cols = new List<Color>(); 
-		for (int i = 0; i < (texture.width * texture.height); i++)
-			cols.Add(color);
-		texture.SetPixels(cols.ToArray());
-		texture.Apply();
 
-		sr.color = color; //you can also add that color to the sprite renderer
 
-		sr.sprite = Sprite.Create(texture, new Rect(0, 0, 1024, 1024), Vector2.zero, 1); //create a sprite with the texture we just created and colored in
+    /**
+	 * Method that prints the objs world coordinates to the console
+	 */
+    void PrintWorldPos(GameObject obj) {
+        Debug.Log(obj.transform.position.ToString("F4")); 
+    }
 
-		//convert coordinates to local space
-		float lx = Mathf.Infinity, ly = Mathf.Infinity;
-		foreach (Vector2 vi in vertices)
-		{
-			if (vi.x < lx)
-				lx = vi.x;
-			if (vi.y < ly)
-				ly = vi.y;
-		}
-		Vector2[] localv = new Vector2[vertices.Length];
-		for (int i = 0; i < vertices.Length; i++)
-		{
-			localv[i] = vertices[i] - new Vector2(lx, ly);
-		}
+    /**
+    * Method that checks if the required components are visible (both hands and head) and updates the view.
+    */
+    void CheckBoundingTriangleVisibility() {
+        bool isAllBoundingComponentsVisible = mLeftHandObj.activeInHierarchy && mRightHandObj.activeInHierarchy && mHeadObj.activeInHierarchy; 
+        
+        if (isAllBoundingComponentsVisible &&  ! isBoundingTriangleVisible) {
+            isBoundingTriangleVisible = true; 
+            DrawBoundingTriangle(); 
+        }
+        else if ( ! isAllBoundingComponentsVisible && isBoundingTriangleVisible) {
+            isBoundingTriangleVisible = false; 
+            mBoundingTriangle.GetComponent < MeshFilter > ().mesh.Clear(); 
+        }
+    }
 
-		sr.sprite.OverrideGeometry(localv, triangles); // set the vertices and triangles
+    /**
+	 * Method that draws a bounding triangle 
+	 */
+    void DrawBoundingTriangle() {
+        Mesh mesh = mBoundingTriangle.GetComponent < MeshFilter > ().mesh; 
+        mesh.Clear(); 
+        mesh.vertices = new Vector3[] {new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0)}; 
+        mesh.uv = new Vector2[] {new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1)}; 
+        mesh.triangles = new int[] {0, 1, 2 }; 
+    }
 
-		polygon.transform.position = (Vector2)transform.InverseTransformPoint(transform.position) + new Vector2(lx, ly); // return to world space
-	}
+    /**
+	 * Method that removes the bounding triangle
+	 */
+    void RemoveBoundingTriangle() {
+        Mesh mesh = mBoundingTriangle.GetComponent < MeshFilter > ().mesh; 
+        mesh.Clear(); 
+    }
 
-	// Update is called once per frame
-	void Update () {
-		printWorldPos (leftHandObj);
-		printWorldPos (rightHandObj);
-		printWorldPos (headObj);
-
-	}
-
-	void printWorldPos(GameObject obj){
-		Debug.Log (obj.transform.position.ToString("F4"));
-	}
-
-	void drawBoundingTriangle(){
-		mGoTriangle.AddComponent<MeshFilter>();
-		mGoTriangle.AddComponent<MeshRenderer>();
-		Mesh meshTriangle = mGoTriangle.GetComponent<MeshFilter>().mesh;
-		meshTriangle.Clear();
-		meshTriangle.vertices = new Vector3[] { new Vector3(0, 0, 0), new Vector3(0, 50f, 0), new Vector3(50f, 50f, 0) };
-		meshTriangle.uv = new Vector2[] { new Vector2(0, 0), new Vector2(0, 50f), new Vector2(50f, 50f) };
-		meshTriangle.triangles = new int[] { 0, 1, 2 };
-	}
 }
