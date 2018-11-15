@@ -1,6 +1,7 @@
 ﻿using System.Collections; 
 using System.Collections.Generic; 
 using UnityEngine; 
+using TMPro; 
 
 public class BoundingTriangle:MonoBehaviour {
     public GameObject mLeftHandObj, mRightHandObj, mHeadObj; 
@@ -9,6 +10,7 @@ public class BoundingTriangle:MonoBehaviour {
 
     // Rending variables
     private Color32[] mBoundingTriangleColors; 
+    private TextMeshProUGUI mEFEnergy, mEFSpatialExtent; 
 
     void Start() {
         initialize(); 
@@ -21,6 +23,9 @@ public class BoundingTriangle:MonoBehaviour {
         mBoundingTriangle.AddComponent < MeshFilter > (); 
         mBoundingTriangle.AddComponent < MeshRenderer > (); 
 
+        mEFEnergy = GameObject.FindWithTag("EFEnergy").GetComponent < TextMeshProUGUI > (); 
+        mEFSpatialExtent = GameObject.FindWithTag("EFSpatialExtent").GetComponent < TextMeshProUGUI > (); 
+
         // Init logic variables
         isBoundingTriangleVisible = false; 
                 
@@ -30,6 +35,14 @@ public class BoundingTriangle:MonoBehaviour {
             colors[i] = Color32.Lerp(Color.green, Color.green, 1.0f); 
         }
         mBoundingTriangleColors = colors; 
+    }
+
+    void calcEFEnergy() {
+
+    }
+
+    void auxLimbVelocity(Vector3 limbPosition) {
+
     }
 
     void setup() {
@@ -65,7 +78,7 @@ public class BoundingTriangle:MonoBehaviour {
         }
         else if ( ! isAllBoundingComponentsVisible && isBoundingTriangleVisible) {
             isBoundingTriangleVisible = false; 
-            mBoundingTriangle.GetComponent < MeshFilter > ().mesh.Clear(); 
+            RemoveBoundingTriangle();
         }
     }
 
@@ -83,7 +96,15 @@ public class BoundingTriangle:MonoBehaviour {
         mesh.uv = new Vector2[] {new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1)}; 
         mesh.triangles = new int[] {0, 1, 2 }; 
 
-        mesh.colors32 = mBoundingTriangleColors;
+        mesh.colors32 = mBoundingTriangleColors; 
+
+        float perimeter = Vector3.Distance(mLeftHandObj.transform.position, mRightHandObj.transform.position); 
+        perimeter += Vector3.Distance(mRightHandObj.transform.position, mHeadObj.transform.position); 
+        perimeter += Vector3.Distance(mHeadObj.transform.position, mLeftHandObj.transform.position); 
+        perimeter *= 10f;
+
+        // Update UI
+        mEFSpatialExtent.text = perimeter.ToString(); 
     }
 
     /**
@@ -92,6 +113,9 @@ public class BoundingTriangle:MonoBehaviour {
     void RemoveBoundingTriangle() {
         Mesh mesh = mBoundingTriangle.GetComponent < MeshFilter > ().mesh; 
         mesh.Clear(); 
+
+        // Update UI
+        mEFSpatialExtent.text = "0"; 
     }
 
 }
