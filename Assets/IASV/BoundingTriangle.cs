@@ -4,13 +4,20 @@ using UnityEngine;
 using TMPro; 
 
 public class BoundingTriangle:MonoBehaviour {
+    
+    private float HEAD_MASS = 4.5f; // 4.5kg
+private float HAND_MASS = 0.5f; 
+
     public GameObject mLeftHandObj, mRightHandObj, mHeadObj; 
     private GameObject mBoundingTriangle; 
     private bool isBoundingTriangleVisible; 
+    private Vector3 mLeftHandObjLastPos, mRightHandObjLastPos, mHeadObjLastPos; 
 
     // Rending variables
     private Color32[] mBoundingTriangleColors; 
     private TextMeshProUGUI mEFEnergy, mEFSpatialExtent; 
+    private bool isOdd = true; 
+    private float mDeltaTime = 0;
 
     void Start() {
         initialize(); 
@@ -26,6 +33,10 @@ public class BoundingTriangle:MonoBehaviour {
         mEFEnergy = GameObject.FindWithTag("EFEnergy").GetComponent < TextMeshProUGUI > (); 
         mEFSpatialExtent = GameObject.FindWithTag("EFSpatialExtent").GetComponent < TextMeshProUGUI > (); 
 
+        mHeadObjLastPos = new Vector3(0, 0, 0);
+        mLeftHandObjLastPos = new Vector3(0, 0, 0);
+        mRightHandObjLastPos = new Vector3(0, 0, 0);
+
         // Init logic variables
         isBoundingTriangleVisible = false; 
                 
@@ -37,12 +48,28 @@ public class BoundingTriangle:MonoBehaviour {
         mBoundingTriangleColors = colors; 
     }
 
-    void calcEFEnergy() {
+    void calcEFEnergy(float deltaTime) {
+        float eTotal = (HEAD_MASS * Mathf.Pow(auxLimbVelocity(mHeadObj.transform.position, mHeadObjLastPos, deltaTime), 2) + 
+                       HAND_MASS * Mathf.Pow(auxLimbVelocity(mLeftHandObj.transform.position, mLeftHandObjLastPos, deltaTime), 2) + 
+                       HAND_MASS * Mathf.Pow(auxLimbVelocity(mRightHandObj.transform.position, mRightHandObjLastPos, deltaTime), 2))
+                       /2; 
 
+        eTotal *= 10f;
+        mEFEnergy.text = eTotal.ToString(); 
+
+        mHeadObjLastPos = mHeadObj.transform.position;
+        mLeftHandObjLastPos = mLeftHandObj.transform.position;
+        mRightHandObjLastPos = mRightHandObj.transform.position;
     }
 
-    void auxLimbVelocity(Vector3 limbPosition) {
-
+    /**
+    * Auxiliar method to the Expressive Feature - Energy.
+    * Calculates the limb velocity.
+    */
+    float auxLimbVelocity(Vector3 limbPosition, Vector3 lastPos, float deltaTime) {
+        return Mathf.Sqrt(Mathf.Pow((limbPosition.x - lastPos.x) / deltaTime, 2) + 
+                Mathf.Pow((limbPosition.y - lastPos.y) / deltaTime, 2) +
+                Mathf.Pow((limbPosition.z - lastPos.z) / deltaTime, 2)); 
     }
 
     void setup() {
@@ -54,7 +81,17 @@ public class BoundingTriangle:MonoBehaviour {
     // Update is called once per frame
     void Update() {
        CheckBoundingTriangleVisibility(); 
-       
+    }
+
+    // Exactly called 50 times per second
+    void FixedUpdate() {
+        mDeltaTime += Time.deltaTime;
+
+        if (isOdd){
+            calcEFEnergy(mDeltaTime);
+            mDeltaTime = 0;
+        } 
+        isOdd = !isOdd;
     }
 
     /**
@@ -78,7 +115,7 @@ public class BoundingTriangle:MonoBehaviour {
         }
         else if ( ! isAllBoundingComponentsVisible && isBoundingTriangleVisible) {
             isBoundingTriangleVisible = false; 
-            RemoveBoundingTriangle();
+            RemoveBoundingTriangle(); 
         }
     }
 
@@ -101,7 +138,7 @@ public class BoundingTriangle:MonoBehaviour {
         float perimeter = Vector3.Distance(mLeftHandObj.transform.position, mRightHandObj.transform.position); 
         perimeter += Vector3.Distance(mRightHandObj.transform.position, mHeadObj.transform.position); 
         perimeter += Vector3.Distance(mHeadObj.transform.position, mLeftHandObj.transform.position); 
-        perimeter *= 10f;
+        perimeter *= 10f; 
 
         // Update UI
         mEFSpatialExtent.text = perimeter.ToString(); 
