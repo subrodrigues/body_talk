@@ -6,16 +6,17 @@ using TMPro;
 public class BoundingTriangle:MonoBehaviour {
     
     private float HEAD_MASS = 4.5f; // 4.5kg
-private float HAND_MASS = 0.5f; 
+    private float HAND_MASS = 0.5f; 
 
     public GameObject mLeftHandObj, mRightHandObj, mHeadObj; 
     private GameObject mBoundingTriangle; 
     private bool isBoundingTriangleVisible; 
     private Vector3 mLeftHandObjLastPos, mRightHandObjLastPos, mHeadObjLastPos; 
+    private Vector3 mLeftHandObjLastVelocity, mRightHandObjLastVelocity;
 
     // Rending variables
     private Color32[] mBoundingTriangleColors; 
-    private TextMeshProUGUI mEFEnergy, mEFSpatialExtent; 
+    private TextMeshProUGUI mEFEnergy, mEFSpatialExtent, mSmoothnessLeft, mSmoothnessRight; 
     private bool isOdd = true; 
     private float mDeltaTime = 0;
 
@@ -32,10 +33,17 @@ private float HAND_MASS = 0.5f;
 
         mEFEnergy = GameObject.FindWithTag("EFEnergy").GetComponent < TextMeshProUGUI > (); 
         mEFSpatialExtent = GameObject.FindWithTag("EFSpatialExtent").GetComponent < TextMeshProUGUI > (); 
+        mSmoothnessLeft = GameObject.FindWithTag("EFSmoothnessLeft").GetComponent < TextMeshProUGUI > (); 
+        mSmoothnessRight = GameObject.FindWithTag("EFSmoothnessRight").GetComponent < TextMeshProUGUI > (); 
 
+        // Variables to calculate Energy
         mHeadObjLastPos = new Vector3(0, 0, 0);
         mLeftHandObjLastPos = new Vector3(0, 0, 0);
         mRightHandObjLastPos = new Vector3(0, 0, 0);
+
+        // Variables to calculate Smoothness
+        mLeftHandObjLastVelocity = new Vector3(0, 0, 0);
+        mRightHandObjLastVelocity = new Vector3(0, 0, 0);
 
         // Init logic variables
         isBoundingTriangleVisible = false; 
@@ -46,30 +54,6 @@ private float HAND_MASS = 0.5f;
             colors[i] = Color32.Lerp(Color.green, Color.green, 1.0f); 
         }
         mBoundingTriangleColors = colors; 
-    }
-
-    void calcEFEnergy(float deltaTime) {
-        float eTotal = (HEAD_MASS * Mathf.Pow(auxLimbVelocity(mHeadObj.transform.position, mHeadObjLastPos, deltaTime), 2) + 
-                       HAND_MASS * Mathf.Pow(auxLimbVelocity(mLeftHandObj.transform.position, mLeftHandObjLastPos, deltaTime), 2) + 
-                       HAND_MASS * Mathf.Pow(auxLimbVelocity(mRightHandObj.transform.position, mRightHandObjLastPos, deltaTime), 2))
-                       /2; 
-
-        eTotal *= 10f;
-        mEFEnergy.text = eTotal.ToString(); 
-
-        mHeadObjLastPos = mHeadObj.transform.position;
-        mLeftHandObjLastPos = mLeftHandObj.transform.position;
-        mRightHandObjLastPos = mRightHandObj.transform.position;
-    }
-
-    /**
-    * Auxiliar method to the Expressive Feature - Energy.
-    * Calculates the limb velocity.
-    */
-    float auxLimbVelocity(Vector3 limbPosition, Vector3 lastPos, float deltaTime) {
-        return Mathf.Sqrt(Mathf.Pow((limbPosition.x - lastPos.x) / deltaTime, 2) + 
-                Mathf.Pow((limbPosition.y - lastPos.y) / deltaTime, 2) +
-                Mathf.Pow((limbPosition.z - lastPos.z) / deltaTime, 2)); 
     }
 
     void setup() {
@@ -89,9 +73,70 @@ private float HAND_MASS = 0.5f;
 
         if (isOdd){
             calcEFEnergy(mDeltaTime);
+
+            Vector3 leftHandCurrentVel = new Vector3((mLeftHandObj.transform.position.x - mLeftHandObjLastPos.x) / mDeltaTime, 
+                                                    (mLeftHandObj.transform.position.y - mLeftHandObjLastPos.y) / mDeltaTime,
+                                                    0);
+            Vector3 rightHandCurrentVel = new Vector3((mRightHandObj.transform.position.x - mRightHandObjLastPos.x) / mDeltaTime, 
+                                                    (mRightHandObj.transform.position.y - mRightHandObjLastPos.y) / mDeltaTime,
+                                                    0);
+            calcEFSmoothness(leftHandCurrentVel, mLeftHandObjLastVelocity, rightHandCurrentVel, mRightHandObjLastVelocity, mDeltaTime);
+            
             mDeltaTime = 0;
+
+            // Update last value variables
+            mLeftHandObjLastVelocity = leftHandCurrentVel;
+            mRightHandObjLastVelocity = rightHandCurrentVel;
+
+            mHeadObjLastPos = mHeadObj.transform.position;
+            mLeftHandObjLastPos = mLeftHandObj.transform.position;
+            mRightHandObjLastPos = mRightHandObj.transform.position;
+
         } 
         isOdd = !isOdd;
+    }
+
+    void calcEFSmoothness(Vector3 leftHandVel, Vector3 leftHandLastVel, Vector3 rightHandVel, Vector3 rightHandLastVel, float deltaTime){
+        float leftCurvature = auxCurvatureValue(leftHandVel, leftHandLastVel, deltaTime);
+        float rightCurvature = auxCurvatureValue(rightHandVel, rightHandLastVel, deltaTime);
+
+        // leftCurvature *= 10f;
+        // rightCurvature *= 10f;
+        mSmoothnessLeft.text = HasValue(leftCurvature) ? leftCurvature.ToString() : "0";
+        mSmoothnessRight.text = HasValue(rightCurvature) ? rightCurvature.ToString() : "0";
+    }
+
+    float auxCurvatureValue(Vector3 handVel, Vector3 lastHandVel, float deltaTime) {
+        float xCurrentAcc = (handVel.x - lastHandVel.x) / deltaTime;
+        float yCurrentAcc = (handVel.y - lastHandVel.y) / deltaTime;
+
+        float top = (handVel.x * yCurrentAcc) - (handVel.y * xCurrentAcc);
+        float bottom = Mathf.Pow(handVel.x, 2) + Mathf.Pow(handVel.y, 2);
+        float bottomPow = Mathf.Pow(bottom, (3f/2f));
+        Debug.Log(top + " " + bottom + " " + bottomPow);
+
+        // TODO: Limit decimal cases (for example, all x1000)
+        return top / bottomPow;
+    }
+
+    void calcEFEnergy(float deltaTime) {
+        float eTotal = (HEAD_MASS * Mathf.Pow(auxLimbVelocity(mHeadObj.transform.position, mHeadObjLastPos, deltaTime), 2) + 
+                       HAND_MASS * Mathf.Pow(auxLimbVelocity(mLeftHandObj.transform.position, mLeftHandObjLastPos, deltaTime), 2) + 
+                       HAND_MASS * Mathf.Pow(auxLimbVelocity(mRightHandObj.transform.position, mRightHandObjLastPos, deltaTime), 2))
+                       /2; 
+
+        eTotal *= 10f;
+        mEFEnergy.text = eTotal.ToString(); 
+    }
+
+    /**
+    * Auxiliar method to the Expressive Feature - Energy.
+    * Calculates the limb velocity.
+    */
+    float auxLimbVelocity(Vector3 limbPosition, Vector3 lastPos, float deltaTime) {
+        return Mathf.Sqrt(Mathf.Pow((limbPosition.x - lastPos.x) / deltaTime, 2) + 
+                Mathf.Pow((limbPosition.y - lastPos.y) / deltaTime, 2) +
+                Mathf.Pow((limbPosition.z - lastPos.z) / deltaTime, 2)); 
     }
 
     /**
@@ -155,4 +200,8 @@ private float HAND_MASS = 0.5f;
         mEFSpatialExtent.text = "0"; 
     }
 
+    // Or IsNanOrInfinity
+    public static bool HasValue(float value){
+        return !float.IsNaN(value) && !float.IsInfinity(value);
+    }
 }
