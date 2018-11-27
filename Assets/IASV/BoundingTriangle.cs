@@ -13,14 +13,14 @@ public class BoundingTriangle:MonoBehaviour {
     private bool isBoundingTriangleVisible; 
     private Vector3 mLeftHandObjLastPos, mRightHandObjLastPos, mHeadObjLastPos; 
     private Vector3 mLeftHandObjLastVelocity, mRightHandObjLastVelocity;
-    private List<Vector3> mLeftHandPositions, mRightHandPositions;
-
+    private Vector3[] mLeftHandPositions, mRightHandPositions; // TODO: Change this to ARRAY
+    
     // Rending variables
     private Color32[] mBoundingTriangleColors; 
-    private TextMeshProUGUI mEFEnergy, mEFSpatialExtent, mSmoothnessLeft, mSmoothnessRight, mSISpatial, mSISpread; 
-    private bool isOdd = true; 
+    private TextMeshProUGUI mEFEnergy, mEFSpatialExtent, mSmoothnessLeft, mSmoothnessRight, mSISpatial, mSISpread, mHeadLeaning; 
+    private bool isOdd = true;
     private float mDeltaTime = 0;
-    private int mTotalFrames = 0;
+    private int mCurrentFrame = 0;
 
     void Start() {
         initialize(); 
@@ -39,6 +39,7 @@ public class BoundingTriangle:MonoBehaviour {
         mSmoothnessRight = GameObject.FindWithTag("EFSmoothnessRight").GetComponent < TextMeshProUGUI > (); 
         mSISpatial = GameObject.FindWithTag("EFSISpatial").GetComponent < TextMeshProUGUI > (); 
         mSISpread = GameObject.FindWithTag("EFSISpread").GetComponent < TextMeshProUGUI > (); 
+        mHeadLeaning = GameObject.FindWithTag("EFHeadLeaning").GetComponent < TextMeshProUGUI > (); 
 
         // Variables to calculate Energy
         mHeadObjLastPos = new Vector3(0, 0, 0);
@@ -49,8 +50,8 @@ public class BoundingTriangle:MonoBehaviour {
         mLeftHandObjLastVelocity = new Vector3(0, 0, 0);
         mRightHandObjLastVelocity = new Vector3(0, 0, 0);
 
-        mLeftHandPositions = new List<Vector3>(25);
-        mRightHandPositions = new List<Vector3>(25);
+        mLeftHandPositions = new Vector3[25];
+        mRightHandPositions = new Vector3[25];
 
         // Init logic variables
         isBoundingTriangleVisible = false; 
@@ -79,7 +80,7 @@ public class BoundingTriangle:MonoBehaviour {
         mDeltaTime += Time.deltaTime;
 
         if (isOdd){
-            mTotalFrames += 1; // Increment frame count
+            mCurrentFrame += 1; // Increment frame count
 
             calcEFEnergy(mDeltaTime);
 
@@ -89,26 +90,21 @@ public class BoundingTriangle:MonoBehaviour {
             Vector3 rightHandCurrentVel = new Vector3((mRightHandObj.transform.position.x - mRightHandObjLastPos.x) / mDeltaTime, 
                                                     (mRightHandObj.transform.position.y - mRightHandObjLastPos.y) / mDeltaTime,
                                                     0);
+
             calcEFSmoothness(leftHandCurrentVel, mLeftHandObjLastVelocity, rightHandCurrentVel, mRightHandObjLastVelocity, mDeltaTime);
             
             if(isBoundingTriangleVisible)
                 calcSISpatial(mBoundingTriangle.transform.position);
 
-            if(mTotalFrames == 25){ // 1 Second reached
-                mTotalFrames = 0;
+            if(mCurrentFrame == 25){ // 1 Second reached
+                mCurrentFrame = 0;
                 calcSISpread(mLeftHandPositions, mRightHandPositions);
             } else{
-                if(mLeftHandPositions.Count < 25)
-                    mLeftHandPositions.Add(mLeftHandObj.transform.position);
-                else
-                    mLeftHandPositions.Insert(mTotalFrames, mLeftHandObj.transform.position);
-
-                if(mRightHandPositions.Count < 25)
-                    mRightHandPositions.Add(mRightHandObj.transform.position);
-                else
-                    mRightHandPositions.Insert(mTotalFrames, mRightHandObj.transform.position);
+                mLeftHandPositions[mCurrentFrame] = mLeftHandObj.transform.position;
+                mRightHandPositions[mCurrentFrame] = mRightHandObj.transform.position;
             }
-            Debug.Log("SIZE " + mRightHandPositions.Count);
+
+            calcHeadLeaning(mDeltaTime);
 
             mDeltaTime = 0;
 
@@ -123,7 +119,13 @@ public class BoundingTriangle:MonoBehaviour {
         } 
         isOdd = !isOdd;
     }
-    void calcSISpread(List<Vector3> leftHandPos, List<Vector3> rightHandPos){
+
+    void calcHeadLeaning(float deltaTime){
+        float headLeaning = (mHeadObj.transform.position.z - mHeadObjLastPos.z) / deltaTime;
+        mHeadLeaning.text = HasValue(headLeaning) ? headLeaning.ToString() : "0";
+    }
+
+    void calcSISpread(Vector3[] leftHandPos, Vector3[] rightHandPos){
         float hLeftHand = calcGeometricEntropy(leftHandPos);
         float hRightHand = calcGeometricEntropy(rightHandPos);
 
@@ -132,16 +134,16 @@ public class BoundingTriangle:MonoBehaviour {
         mSISpread.text = HasValue(spreadSI) ? spreadSI.ToString() : "0";
     }
 
-    float calcGeometricEntropy(List<Vector3> handPositions){
+    float calcGeometricEntropy(Vector3[] handPositions){
         float distance = 0;
         for(int i = 1; i < 25; i++){
             distance += Vector3.Distance(handPositions[i-1], handPositions[i]); 
         }
 
-        List<Vector3> convexHull = JarvisMarchAlgorithm.GetConvexHull(handPositions);
+        Vector3[] convexHull = JarvisMarchAlgorithm.GetConvexHull(handPositions);
 
         float perimeterAroundConvexHull = 0;
-        for(int i = 1; i < convexHull.Count; i++){
+        for(int i = 1; i < convexHull.Length; i++){
             perimeterAroundConvexHull += Vector3.Distance(convexHull[i-1], convexHull[i]);
         }
 
