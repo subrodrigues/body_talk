@@ -6,6 +6,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using System;
 
 //Generate a counter-clockwise convex hull with the jarvis march algorithm (gift wrapping)
 //The algorithm is O(n*n) but is often faster if the number of points on the hull is fewer than all points
@@ -15,22 +16,20 @@ using UnityEngine;
 //But this is a special case, which will take time to test, so make sure they are NOT colinear!!!
 public static class JarvisMarchAlgorithm
 {
-    public static List<Vector3> GetConvexHull(List<Vector3> points)
+    public static Vector3[] GetConvexHull(Vector3[] points) // TODO: Change this to ARRAY
     {
         //If we have just 3 points, then they are the convex hull, so return those
-        if (points.Count == 3)
+        if (points.Length == 3)
         {
             //These might not be ccw, and they may also be colinear
             return points;
         }
 
         //If fewer points, then we cant create a convex hull
-        if (points.Count < 3)
+        if (points.Length < 3)
         {
             return null;
         }
-
-
 
         //The list with points on the convex hull
         List<Vector3> convexHull = new List<Vector3>();
@@ -38,25 +37,23 @@ public static class JarvisMarchAlgorithm
         //Step 1. Find the vertex with the smallest x coordinate
         //If several have the same x coordinate, find the one with the smallest z
         Vector3 startPos = points[0];
+        int startPosIndex = 0;
 
-        for (int i = 1; i < points.Count; i++)
-        {
+        for (int i = 1; i < points.Length; i++) {
             Vector3 testPos = points[i];
 
             //Because of precision issues, we use Mathf.Approximately to test if the x positions are the same
-            if (testPos.x < startPos.x || (Mathf.Approximately(testPos.x, startPos.x) && testPos.z < startPos.z))
-            {
+            if (testPos.x < startPos.x || (Mathf.Approximately(testPos.x, startPos.x) && testPos.z < startPos.z)){
                 startPos = points[i];
+                startPosIndex = i;
             }
         }
 
         //This vertex is always on the convex hull
         convexHull.Add(startPos);
 
-        points.Remove(startPos);
-
+        RemoveAt(ref points, startPosIndex);
       
-
         //Step 2. Loop to generate the convex hull
         Vector3 currentPoint = convexHull[0];
 
@@ -65,17 +62,17 @@ public static class JarvisMarchAlgorithm
 
         int counter = 0;
 
-        while (true)
-        {
+        while (true) {
             //After 2 iterations we have to add the start position again so we can terminate the algorithm
             //Cant use convexhull.count because of colinear points, so we need a counter
-            if (counter == 2)
-            {            
-                points.Add(convexHull[0]);
+            if (counter == 2){    
+                Vector3 item = convexHull[0];   
+                AddItemToArray(ref points, ref item);   
             }
         
             //Pick next point randomly
-            Vector3 nextPoint = points[Random.Range(0, points.Count)];
+            int nextPointIndex = UnityEngine.Random.Range(0, points.Length);
+            Vector3 nextPoint = points[nextPointIndex];
 
             //To 2d space so we can see if a point is to the left is the vector ab
             Vector2 a = new Vector2(currentPoint.x, currentPoint.z);
@@ -83,8 +80,7 @@ public static class JarvisMarchAlgorithm
             Vector2 b = new Vector2(nextPoint.x, nextPoint.z);
 
             //Test if there's a point to the right of ab, if so then it's the new b
-            for (int i = 0; i < points.Count; i++)
-            {
+            for (int i = 0; i < points.Length; i++) {
                 //Dont test the point we picked randomly
                 if (points[i].Equals(nextPoint))
                 {
@@ -138,19 +134,16 @@ public static class JarvisMarchAlgorithm
                 currentPoint = colinearPoints[colinearPoints.Count - 1];
 
                 //Remove the points that are now on the convex hull
-                for (int i = 0; i < colinearPoints.Count; i++)
-                {
-                    points.Remove(colinearPoints[i]);
+                for (int i = 0; i < colinearPoints.Count; i++) {
+                    RemoveAt(ref points, i);
                 }
 
                 colinearPoints.Clear();
             }
-            else
-            {
+            else {
                 convexHull.Add(nextPoint);
             
-                points.Remove(nextPoint);
-
+                RemoveAt(ref points, nextPointIndex);
                 currentPoint = nextPoint;
             }
 
@@ -166,7 +159,28 @@ public static class JarvisMarchAlgorithm
             counter += 1;
         }
 
-        return convexHull;
+        return convexHull.ToArray();
     }
+
+    public static void RemoveAt<T>(ref T[] arr, int index) {
+        for (int a = index; a < arr.Length - 1; a++){
+            // moving elements downwards, to fill the gap at [index]
+            arr[a] = arr[a + 1];
+        }
+        // finally, let's decrement Array's size by one
+        Array.Resize(ref arr, arr.Length - 1);
+    }
+
+    public static void AddItemToArray<T> (ref T[] original, ref T itemToAdd) {
+        T[] finalArray = new T[ original.Length + 1 ];
+        for(int i = 0; i < original.Length; i ++ ) {
+            finalArray[i] = original[i];
+        }
+
+        finalArray[finalArray.Length - 1] = itemToAdd;
+
+        original = finalArray;
+    }
+
 }
 
