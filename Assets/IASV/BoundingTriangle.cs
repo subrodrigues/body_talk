@@ -17,10 +17,11 @@ public class BoundingTriangle:MonoBehaviour {
     
     // Rending variables
     private Color32[] mBoundingTriangleColors; 
-    private TextMeshProUGUI mEFEnergy, mEFSpatialExtent, mSmoothnessLeft, mSmoothnessRight, mSISpatial, mSISpread, mHeadLeaning; 
+    private TextMeshProUGUI mEFEnergy, mEFSpatialExtent, mEFSmoothness, mSISpatial, mSISpread, mHeadLeaning; 
     private bool isOdd = true;
     private float mDeltaTime = 0;
     private int mCurrentFrame = 0;
+    private float mETotal = 0.0f, mTotalSmoothness = 0.0f, mSpatialExtent = 0.0f;
 
     void Start() {
         initialize(); 
@@ -35,8 +36,8 @@ public class BoundingTriangle:MonoBehaviour {
 
         mEFEnergy = GameObject.FindWithTag("EFEnergy").GetComponent < TextMeshProUGUI > (); 
         mEFSpatialExtent = GameObject.FindWithTag("EFSpatialExtent").GetComponent < TextMeshProUGUI > (); 
-        mSmoothnessLeft = GameObject.FindWithTag("EFSmoothnessLeft").GetComponent < TextMeshProUGUI > (); 
-        mSmoothnessRight = GameObject.FindWithTag("EFSmoothnessRight").GetComponent < TextMeshProUGUI > (); 
+        mEFSmoothness = GameObject.FindWithTag("EFSmoothness").GetComponent < TextMeshProUGUI > (); 
+        // mSmoothnessRight = GameObject.FindWithTag("EFSmoothnessRight").GetComponent < TextMeshProUGUI > (); 
         mSISpatial = GameObject.FindWithTag("EFSISpatial").GetComponent < TextMeshProUGUI > (); 
         mSISpread = GameObject.FindWithTag("EFSISpread").GetComponent < TextMeshProUGUI > (); 
         mHeadLeaning = GameObject.FindWithTag("EFHeadLeaning").GetComponent < TextMeshProUGUI > (); 
@@ -50,8 +51,8 @@ public class BoundingTriangle:MonoBehaviour {
         mLeftHandObjLastVelocity = new Vector3(0, 0, 0);
         mRightHandObjLastVelocity = new Vector3(0, 0, 0);
 
-        mLeftHandPositions = new Vector3[25];
-        mRightHandPositions = new Vector3[25];
+        mLeftHandPositions = new Vector3[50];
+        mRightHandPositions = new Vector3[50];
 
         // Init logic variables
         isBoundingTriangleVisible = false; 
@@ -96,7 +97,17 @@ public class BoundingTriangle:MonoBehaviour {
             if(isBoundingTriangleVisible)
                 calcSISpatial(mBoundingTriangle.transform.position);
 
-            if(mCurrentFrame == 25){ // 1 Second reached
+
+            if(mCurrentFrame == 50){ // 2 Seconds reached 
+                mEFEnergy.text = (mETotal / 50.0f).ToString(); 
+                mSISpatial.text = (mSpatialExtent / 50.0f).ToString();
+                mEFSmoothness.text = (mTotalSmoothness / 50.0f).ToString();
+
+                mETotal = 0.0f;
+                mTotalSmoothness = 0.0f;
+                mSpatialExtent = 0.0f;
+                
+                
                 mCurrentFrame = 0;
                 calcSISpread(mLeftHandPositions, mRightHandPositions);
             } else{
@@ -136,7 +147,7 @@ public class BoundingTriangle:MonoBehaviour {
 
     float calcGeometricEntropy(Vector3[] handPositions){
         float distance = 0;
-        for(int i = 1; i < 25; i++){
+        for(int i = 1; i < 50; i++){
             distance += Vector3.Distance(handPositions[i-1], handPositions[i]); 
         }
 
@@ -161,7 +172,7 @@ public class BoundingTriangle:MonoBehaviour {
 
         float spatialSI = horizSI / vertSI;
 
-        mSISpatial.text = HasValue(spatialSI) ? spatialSI.ToString() : "0";
+        mSpatialExtent += spatialSI;
     }
 
     float calcSISpatialAux(float b, float l, float r){
@@ -174,8 +185,12 @@ public class BoundingTriangle:MonoBehaviour {
 
         // leftCurvature *= 10f;
         // rightCurvature *= 10f;
-        mSmoothnessLeft.text = HasValue(leftCurvature) ? leftCurvature.ToString() : "0";
-        mSmoothnessRight.text = HasValue(rightCurvature) ? rightCurvature.ToString() : "0";
+        // mSmoothnessLeft.text = HasValue(leftCurvature) ? leftCurvature.ToString() : "0";
+        // mSmoothnessRight.text = HasValue(rightCurvature) ? rightCurvature.ToString() : "0";
+
+        mTotalSmoothness += ((
+                        (HasValue(leftCurvature) ? leftCurvature : 0) +
+                        (HasValue(rightCurvature) ? rightCurvature : 0)) / 2.0f);
     }
 
     float auxCurvatureValue(Vector3 handVel, Vector3 lastHandVel, float deltaTime) {
@@ -200,8 +215,9 @@ public class BoundingTriangle:MonoBehaviour {
                        HAND_MASS * Mathf.Pow(auxLimbVelocity(mRightHandObj.transform.position, mRightHandObjLastPos, deltaTime), 2))
                        /2; 
 
+        mETotal += eTotal;
         // eTotal *= 10f;
-        mEFEnergy.text = eTotal.ToString(); 
+        // mEFEnergy.text = eTotal.ToString(); 
     }
 
     /**
@@ -261,7 +277,7 @@ public class BoundingTriangle:MonoBehaviour {
         // perimeter *= 10f; 
 
         // Update UI
-        mEFSpatialExtent.text = perimeter.ToString(); 
+        // mEFSpatialExtent.text = perimeter.ToString(); 
     }
 
     /**
