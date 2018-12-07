@@ -43,8 +43,7 @@ public class GiftWrappingAlgorithm : MonoBehaviour{
     {
 
         // Render source points
-        for (int i = 0; i < k_iNumPoints; i++)
-        {
+        for (int i = 0; i < k_iNumPoints; i++){
             Vector3 pt = m_points[i];
 
             Debug.DrawLine(new Vector3(pt.x - 0.05f, pt.y, 0), new Vector3(pt.x + 0.05f, pt.y, 0), Color.green, 0, false);
@@ -124,6 +123,8 @@ public class GiftWrappingAlgorithm : MonoBehaviour{
 
             v = minAngle;
             nConvexHullPts++;
+            Debug.Log("k_iNumPoints: " + k_iNumPoints + " "+ "nConvexHullPts: " + nConvexHullPts + " " + "min: " + min);
+
             Swap(ref convexHull[nConvexHullPts], ref convexHull[min]);
         }
 
