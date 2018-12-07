@@ -77,7 +77,8 @@ public class BoundingTriangle:MonoBehaviour {
 
     // Update is called once per frame
     void Update() {
-       CheckBoundingTriangleVisibility(); 
+        mGiftWrapping.Update();
+        CheckBoundingTriangleVisibility(); 
     }
 
     // Exactly called 50 times per second
