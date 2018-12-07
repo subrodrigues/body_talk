@@ -4,7 +4,8 @@ using UnityEngine;
 using TMPro; 
 
 public class BoundingTriangle:MonoBehaviour {
-    
+    private GiftWrappingAlgorithm mGiftWrapping;
+
     private float HEAD_MASS = 4.5f; // 4.5kg
     private float HAND_MASS = 0.5f; 
 
@@ -29,6 +30,9 @@ public class BoundingTriangle:MonoBehaviour {
     }
 
     void initialize() {
+        mGiftWrapping = new GiftWrappingAlgorithm();
+        mGiftWrapping.Start();
+
         // Init game objects
         mBoundingTriangle = new GameObject("Bounding Triangle"); 
         mBoundingTriangle.AddComponent < MeshFilter > (); 
@@ -111,8 +115,8 @@ public class BoundingTriangle:MonoBehaviour {
                 mCurrentFrame = 0;
                 calcSISpread(mLeftHandPositions, mRightHandPositions);
             } else{
-                mLeftHandPositions[mCurrentFrame] = mLeftHandObj.transform.position;
-                mRightHandPositions[mCurrentFrame] = mRightHandObj.transform.position;
+                mLeftHandPositions[mCurrentFrame] = mLeftHandObj.activeInHierarchy ? mLeftHandObj.transform.position : new Vector3(0,0,0);
+                mRightHandPositions[mCurrentFrame] = mRightHandObj.activeInHierarchy ? mRightHandObj.transform.position : new Vector3(0,0,0);
             }
 
             calcHeadLeaning(mDeltaTime);
@@ -151,11 +155,22 @@ public class BoundingTriangle:MonoBehaviour {
             distance += Vector3.Distance(handPositions[i-1], handPositions[i]); 
         }
 
-        Vector3[] convexHull = JarvisMarchAlgorithm.GetConvexHull(handPositions);
+        List<Vector3> positions = new List<Vector3>();
+        for(int i = 0; i < handPositions.Length; i++)
+            positions.Add(handPositions[i]);
+
+        List<Vector3> convexHull = mGiftWrapping.UpdatePoints(positions);
 
         float perimeterAroundConvexHull = 0;
-        for(int i = 1; i < convexHull.Length; i++){
-            perimeterAroundConvexHull += Vector3.Distance(convexHull[i-1], convexHull[i]);
+        Vector3 lastVertex = new Vector3(0, 0, 0);
+        bool firstIteration = true;
+        foreach(Vector3 vertex in convexHull){
+            if(firstIteration){
+                firstIteration = false;
+                lastVertex = vertex;
+            } else {
+                perimeterAroundConvexHull += Vector3.Distance(lastVertex, vertex);
+            }
         }
 
         float h = Mathf.Log((2*distance) / perimeterAroundConvexHull);
