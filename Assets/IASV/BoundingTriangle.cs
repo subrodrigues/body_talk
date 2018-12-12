@@ -86,12 +86,15 @@ public class BoundingTriangle:MonoBehaviour {
         mDeltaTime += Time.deltaTime;
 
         if (isOdd){
+            Vector3 currentLeftHandPosition = isBoundingTriangleVisible ? mLeftHandObj.transform.position : mLeftHandObjLastPos;
+            Vector3 currentRightHandPosition = isBoundingTriangleVisible ? mRightHandObj.transform.position : mRightHandObjLastPos;
+
             mCurrentFrame += 1; // Increment frame count
 
             calcEFEnergy(mDeltaTime);
 
-            Vector3 leftHandCurrentVel = new Vector3((mLeftHandObj.transform.position.x - mLeftHandObjLastPos.x) / mDeltaTime, 
-                                                    (mLeftHandObj.transform.position.y - mLeftHandObjLastPos.y) / mDeltaTime,
+            Vector3 leftHandCurrentVel = new Vector3((currentLeftHandPosition.x - mLeftHandObjLastPos.x) / mDeltaTime, 
+                                                    (currentLeftHandPosition.y - mLeftHandObjLastPos.y) / mDeltaTime,
                                                     0);
             Vector3 rightHandCurrentVel = new Vector3((mRightHandObj.transform.position.x - mRightHandObjLastPos.x) / mDeltaTime, 
                                                     (mRightHandObj.transform.position.y - mRightHandObjLastPos.y) / mDeltaTime,
@@ -111,13 +114,12 @@ public class BoundingTriangle:MonoBehaviour {
                 mETotal = 0.0f;
                 mTotalSmoothness = 0.0f;
                 mSpatialExtent = 0.0f;
-                
-                
+               
                 mCurrentFrame = 0;
                 calcSISpread(mLeftHandPositions, mRightHandPositions);
             } else{
-                mLeftHandPositions[mCurrentFrame] = mLeftHandObj.activeInHierarchy ? mLeftHandObj.transform.position : new Vector3(0,0,0);
-                mRightHandPositions[mCurrentFrame] = mRightHandObj.activeInHierarchy ? mRightHandObj.transform.position : new Vector3(0,0,0);
+                mLeftHandPositions[mCurrentFrame] = currentLeftHandPosition;
+                mRightHandPositions[mCurrentFrame] = currentRightHandPosition;
             }
 
             calcHeadLeaning(mDeltaTime);
@@ -293,7 +295,7 @@ public class BoundingTriangle:MonoBehaviour {
         // perimeter *= 10f; 
 
         // Update UI
-        // mEFSpatialExtent.text = perimeter.ToString(); 
+        mEFSpatialExtent.text = perimeter.ToString(); 
     }
 
     /**

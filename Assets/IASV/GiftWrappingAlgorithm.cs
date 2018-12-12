@@ -123,7 +123,10 @@ public class GiftWrappingAlgorithm : MonoBehaviour{
 
             v = minAngle;
             nConvexHullPts++;
-            Debug.Log("k_iNumPoints: " + k_iNumPoints + " "+ "nConvexHullPts: " + nConvexHullPts + " " + "min: " + min);
+            // Debug.Log("k_iNumPoints: " + k_iNumPoints + " "+ "nConvexHullPts: " + nConvexHullPts + " " + "min: " + min);
+
+            if(nConvexHullPts >= convexHull.Length)
+                break;
 
             Swap(ref convexHull[nConvexHullPts], ref convexHull[min]);
         }
