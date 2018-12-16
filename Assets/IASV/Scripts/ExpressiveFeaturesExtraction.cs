@@ -4,6 +4,12 @@ using UnityEngine;
 using TMPro; 
 
 public class ExpressiveFeaturesExtraction:MonoBehaviour {
+    // public double JOY_KEY = 0, FEAR_KEY = 1, RELIEF_KEY = 2, SADNESS_KEY = 3, NEUTRAL_KEY = 4;
+    public double mFeatureEnergy = 0, mFeatureSymmetrySpatial = 0, mFeatureSymmetrySpread = 0, mFeatureSmoothnessLeftHand = 0, mFeatureSmoothnessRightHand = 0,
+        mFeatureSpatialExtent = 0, mFeatureHeadLeaning = 0;
+
+    public NetLayer net;
+
     private GiftWrappingAlgorithm mGiftWrapping;
 
     private float HEAD_MASS = 4.5f; // 4.5kg
@@ -22,6 +28,8 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
     private Color32[] mBoundingTriangleColors; 
     private TextMeshProUGUI mEFEnergy, mEFSpatialExtent, mEFLeftCurvature, mEFRightCurvature, mSISpatial, mSISpread, mHeadLeaning; 
     private bool isOdd = true;
+    private bool isNeutral = true;
+
     private float mDeltaTime = 0;
     private int mCurrentFrame = 0;
     private float mETotal = 0.0f, mTotalLeftCurvature = 0.0f, mTotalRightCurvature = 0.0f, mSymmetrySpatial = 0.0f, mTriangleSpatialExtent = 0.0f, mTotalHeadLeaning = 0.0f;
@@ -101,27 +109,66 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
 
             calcHeadLeaning(mDeltaTime);
 
+            // if(mCurrentFrame == 26 && !NetLayer.trained){
+            //     mFeatureEnergy = mETotal / 26.0f;
+            //     mFeatureSymmetrySpatial = mSymmetrySpatial / 26.0f;
+            //     float symmetrySpread = calcSISpread(mLeftHandPositions, mRightHandPositions, 26);
+            //     mFeatureSymmetrySpread = HasValue(symmetrySpread) ? symmetrySpread : 0;
+            //     CalcEFCurvature();
+            //     mFeatureSmoothnessLeftHand = mTotalLeftCurvature;
+            //     mFeatureSmoothnessRightHand = mTotalRightCurvature;
+            //     mFeatureSpatialExtent = mTriangleSpatialExtent / 26.0f;
+            //     mFeatureHeadLeaning = mTotalHeadLeaning / 26.0f;
+
+            //     net.Train(1, 0, 0, 0, 0);
+            // }
+
             if(mCurrentFrame == SLIDING_WINDOW){ // 2 Seconds reached 
-                // Energy ammount
-                mEFEnergy.text = (mETotal / 50.0f).ToString(); 
-
-                // Symmetry Spatial
-                mSISpatial.text = (mSymmetrySpatial / 50.0f).ToString();
-
-                // Hands smoothness
+                mFeatureEnergy = mETotal / 50.0f;
+                mFeatureSymmetrySpatial = mSymmetrySpatial / 50.0f;
+                float symmetrySpread = calcSISpread(mLeftHandPositions, mRightHandPositions, SLIDING_WINDOW);
+                mFeatureSymmetrySpread = HasValue(symmetrySpread) ? symmetrySpread : 0;
                 CalcEFCurvature();
-                mEFLeftCurvature.text = mTotalLeftCurvature.ToString();
-                mEFRightCurvature.text = mTotalRightCurvature.ToString();
+                mFeatureSmoothnessLeftHand = mTotalLeftCurvature;
+                mFeatureSmoothnessRightHand = mTotalRightCurvature;
+                mFeatureSpatialExtent = mTriangleSpatialExtent / 50.0f;
+                mFeatureHeadLeaning = mTotalHeadLeaning / 50.0f;
 
+                double[] C = {mFeatureEnergy, 
+                                mFeatureSymmetrySpatial,
+                                mFeatureSymmetrySpread,
+                                mFeatureSmoothnessLeftHand,
+                                mFeatureSmoothnessRightHand,
+                                mFeatureSpatialExtent,
+                                mFeatureHeadLeaning};
+
+                // Training
+                if(!NetLayer.trained){
+                    if(isNeutral)
+                        net.Train(C, 0);
+                    else
+                        net.Train(C, 1);
+                    
+                    isNeutral = !isNeutral;
+                }
+                else{
+                    double result = net.compute (C);
+                    Debug.Log("NEUTRAL: " + result);
+                }
+
+                // Energy ammount
+                mEFEnergy.text = mFeatureEnergy.ToString(); 
+                // Symmetry Spatial
+                mSISpatial.text = mFeatureSymmetrySpatial.ToString();
+                // Hands smoothness
+                mEFLeftCurvature.text = mFeatureSmoothnessLeftHand.ToString();
+                mEFRightCurvature.text = mFeatureSmoothnessRightHand.ToString();
                 // Bounding Triangle Perimeter
-                mEFSpatialExtent.text = (mTriangleSpatialExtent / 50.0f).ToString();
-
+                mEFSpatialExtent.text = mFeatureSpatialExtent.ToString();
                 // Symmetry Spread 
-                float symmetrySpread = calcSISpread(mLeftHandPositions, mRightHandPositions);
-                mSISpread.text = HasValue(symmetrySpread) ? symmetrySpread.ToString() : "0";
-
+                mSISpread.text = mFeatureSymmetrySpread.ToString();
                 // Head Leaning
-                mHeadLeaning.text = (mTotalHeadLeaning / 50.0f).ToString();
+                mHeadLeaning.text = mFeatureHeadLeaning.ToString();
 
                 // Reset variables
                 mETotal = 0.0f;
@@ -132,6 +179,13 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
                 mTotalHeadLeaning = 0.0f;
 
                 mCurrentFrame = 0;
+
+                if(!NetLayer.trained){
+                    if(isNeutral)
+                        Debug.Log("TRAIN NEUTRAL");
+                    else
+                        Debug.Log("TRAIN JOY");
+                }
             } else{
                 mLeftHandPositions[mCurrentFrame] = currentLeftHandPosition;
                 mRightHandPositions[mCurrentFrame] = currentRightHandPosition;
@@ -164,18 +218,18 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
         mTotalHeadLeaning += headLeaning;
     }
 
-    float calcSISpread(Vector3[] leftHandPos, Vector3[] rightHandPos){
-        float hLeftHand = calcGeometricEntropy(leftHandPos);
-        float hRightHand = calcGeometricEntropy(rightHandPos);
+    float calcSISpread(Vector3[] leftHandPos, Vector3[] rightHandPos, int slidingWindow){
+        float hLeftHand = calcGeometricEntropy(leftHandPos, slidingWindow);
+        float hRightHand = calcGeometricEntropy(rightHandPos, slidingWindow);
 
         float spreadSI = hLeftHand / hRightHand;
 
         return spreadSI;
     }
 
-    float calcGeometricEntropy(Vector3[] handPositions){
+    float calcGeometricEntropy(Vector3[] handPositions, int slidingWindow){
         float distance = 0;
-        for(int i = 1; i < SLIDING_WINDOW; i++){
+        for(int i = 1; i < slidingWindow; i++){
             distance += Vector3.Distance(handPositions[i-1], handPositions[i]); 
         }
 
@@ -225,6 +279,9 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
     }
 
     void CalcEFCurvature(){
+        if(mLeftHandPositions.Length < 3 || mRightHandPositions.Length < 3)
+            return;
+
         float leftCurvature = 0.0f;
         for(int i = 2; i < mLeftHandPositions.Length; i+= 3){
             leftCurvature += CalcCurvatureAux(mLeftHandPositions[i-1], mLeftHandPositions[i], mLeftHandPositions[i+1]);

@@ -15,32 +15,39 @@ public class NetLayer : MonoBehaviour {
 	public static bool trained;
 
 	private int collectedDatasets = 0;
-	private const int maxNumberOfDatasets = 60; 
+	private const int maxNumberOfDatasets = 30; // 5 positives, 10 negatives 
 
 	public ExpressiveFeaturesExtraction mExpressiveFeatures; 
 
 	// Use this for initialization
 	void Start () {
 		//Initialize the network 
-		net = new NeuralNet(7, 8, 4);
+		net = new NeuralNet(7, 8, 1);
 		dataSets = new List<DataSet>();
 	}
 	
 	// Update is called once per frame
 	void Update () {
 		//Let the network decide if the player should jump
-		if (trained) {
-			double result = compute (new double[]{ player.distanceInPercent, player.canJump });
-			if (result > 0.5) {
-				player.jump (); 
-			}
-		}
+		// if (trained) {
+		// 	double result = compute (new double[]{ player.distanceInPercent, player.canJump });
+		// 	if (result > 0.5) {
+		// 		player.jump (); 
+		// 	}
+		// }
 	}
 
-	public void Train(double canJump, double jumped)
-	{ 
-		double[] C = {player.distanceInPercent, canJump};
-		double[] v = {jumped};
+	public void Train(double[] C, double neutralOfJoy){ 
+		// double[] C = {mExpressiveFeatures.mFeatureEnergy, 
+		// 				mExpressiveFeatures.mFeatureSymmetrySpatial,
+		// 				mExpressiveFeatures.mFeatureSymmetrySpread,
+		// 				mExpressiveFeatures.mFeatureSmoothnessLeftHand,
+		// 				mExpressiveFeatures.mFeatureSmoothnessRightHand,
+		// 				mExpressiveFeatures.mFeatureSpatialExtent,
+		// 				mExpressiveFeatures.mFeatureHeadLeaning};
+
+		double[] v = {neutralOfJoy};
+
 		dataSets.Add(new DataSet(C, v));
 
 		collectedDatasets++;
@@ -50,7 +57,7 @@ public class NetLayer : MonoBehaviour {
 		}
 	}
 
-	double compute(double[] vals)
+	public double compute(double[] vals)
 	{
 		double[] result = net.Compute(vals);
 		return result[0];
