@@ -88,22 +88,22 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
         mDeltaTime += Time.deltaTime;
 
         if (isOdd){
-            Vector3 currentLeftHandPosition = isBoundingTriangleVisible ? mLeftHandObj.transform.position : mLeftHandObjLastPos;
-            Vector3 currentRightHandPosition = isBoundingTriangleVisible ? mRightHandObj.transform.position : mRightHandObjLastPos;
+            Vector3 currentLeftHandPosition = mLeftHandObj.transform.position;
+            Vector3 currentRightHandPosition = mRightHandObj.transform.position;
 
             mCurrentFrame += 1; // Increment frame count
 
             calcEFEnergy(mDeltaTime);
 
-            Vector3 leftHandCurrentVel = new Vector3((currentLeftHandPosition.x - mLeftHandObjLastPos.x) / mDeltaTime, 
-                                                    (currentLeftHandPosition.y - mLeftHandObjLastPos.y) / mDeltaTime,
-                                                    0);
-            Vector3 rightHandCurrentVel = new Vector3((mRightHandObj.transform.position.x - mRightHandObjLastPos.x) / mDeltaTime, 
-                                                    (mRightHandObj.transform.position.y - mRightHandObjLastPos.y) / mDeltaTime,
-                                                    0);
+            // Vector3 leftHandCurrentVel = new Vector3((currentLeftHandPosition.x - mLeftHandObjLastPos.x) / mDeltaTime, 
+            //                                         (currentLeftHandPosition.y - mLeftHandObjLastPos.y) / mDeltaTime,
+            //                                         0);
+            // Vector3 rightHandCurrentVel = new Vector3((currentRightHandPosition.x - mRightHandObjLastPos.x) / mDeltaTime, 
+            //                                         (currentRightHandPosition.y - mRightHandObjLastPos.y) / mDeltaTime,
+            //                                         0);
 
-            calcEFSmoothness(leftHandCurrentVel, mLeftHandObjLastVelocity, rightHandCurrentVel, mRightHandObjLastVelocity, mDeltaTime);
-            
+            // calcEFSmoothness(leftHandCurrentVel, mLeftHandObjLastVelocity, rightHandCurrentVel, mRightHandObjLastVelocity, mDeltaTime);
+
             CalcSISpatial();
 
             CalcBoundingTriangleSpatialExtent();
@@ -118,8 +118,9 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
                 mSISpatial.text = (mSymmetrySpatial / 50.0f).ToString();
 
                 // Hands smoothness
-                mEFLeftCurvature.text = (mTotalLeftCurvature / 50.0f).ToString();
-                mEFRightCurvature.text = (mTotalRightCurvature / 50.0f).ToString();
+                CalcEFCurvature();
+                mEFLeftCurvature.text = mTotalLeftCurvature.ToString();
+                mEFRightCurvature.text = mTotalRightCurvature.ToString();
 
                 // Bounding Triangle Perimeter
                 mEFSpatialExtent.text = (mTriangleSpatialExtent / 50.0f).ToString();
@@ -148,8 +149,8 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
             mDeltaTime = 0;
 
             // Update last value variables
-            mLeftHandObjLastVelocity = leftHandCurrentVel;
-            mRightHandObjLastVelocity = rightHandCurrentVel;
+            // mLeftHandObjLastVelocity = leftHandCurrentVel;
+            // mRightHandObjLastVelocity = rightHandCurrentVel;
 
             mHeadObjLastPos = mHeadObj.transform.position;
             mLeftHandObjLastPos = mLeftHandObj.transform.position;
@@ -160,6 +161,9 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
     }
 
     void CalcBoundingTriangleSpatialExtent(){
+        if(!isBoundingTriangleVisible)
+            return;
+
         float perimeter = Vector3.Distance(mLeftHandObj.transform.position, mRightHandObj.transform.position); 
         perimeter += Vector3.Distance(mRightHandObj.transform.position, mHeadObj.transform.position); 
         perimeter += Vector3.Distance(mHeadObj.transform.position, mLeftHandObj.transform.position); 
@@ -233,25 +237,52 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
         return Mathf.Abs(Mathf.Abs(b - l) - Mathf.Abs(b - r) ) / Mathf.Abs(r - l);
     }
 
-    void calcEFSmoothness(Vector3 leftHandVel, Vector3 leftHandLastVel, Vector3 rightHandVel, Vector3 rightHandLastVel, float deltaTime){
-        float leftCurvature = auxCurvatureValue(leftHandVel, leftHandLastVel, deltaTime);
-        float rightCurvature = auxCurvatureValue(rightHandVel, rightHandLastVel, deltaTime);
+    void CalcEFCurvature(){
+        float leftCurvature = 0.0f;
+        for(int i = 2; i < mLeftHandPositions.Length; i+= 3){
+            leftCurvature += CalcCurvatureAux(mLeftHandPositions[i-1], mLeftHandPositions[i], mLeftHandPositions[i+1]);
+        }
+        mTotalLeftCurvature = leftCurvature;
+
+        float rightCurvature = 0.0f;
+        for(int i = 2; i < mRightHandPositions.Length; i+= 3){
+            rightCurvature += CalcCurvatureAux(mRightHandPositions[i-1], mRightHandPositions[i], mRightHandPositions[i+1]);
+        }
+        mTotalRightCurvature = rightCurvature;    
+    }
+
+    float CalcCurvatureAux(Vector3 xMinus, Vector3 x, Vector3 xPlus){
+        Vector3 velVec = (xPlus - xMinus) * 2.0f;
+        float vel = velVec.magnitude;
+
+        Vector3 accVec = (xPlus + xMinus - (2*x));
+        float acc = accVec.magnitude;
+
+        float curvature = Mathf.Abs((acc * Vector3.Dot(velVec, velVec)) - (Vector3.Dot(accVec, velVec)*vel)) / 
+            (Vector3.Dot(velVec, velVec) * Vector3.Dot(velVec, velVec));
+
+        return curvature;
+    }
+
+    void calcEFSmoothness(Vector3 leftHandVel, Vector3 leftHandLastVel, Vector3 rightHandVel, Vector3 rightHandLastVel){
+        float leftCurvature = auxCurvatureValue(leftHandVel, leftHandLastVel);
+        float rightCurvature = auxCurvatureValue(rightHandVel, rightHandLastVel);
 
         mTotalLeftCurvature += leftCurvature;
         mTotalRightCurvature += rightCurvature;
     }
 
-    float auxCurvatureValue(Vector3 handVel, Vector3 lastHandVel, float deltaTime) {
-        float xCurrentAcc = (handVel.x - lastHandVel.x) / deltaTime;
-        float yCurrentAcc = (handVel.y - lastHandVel.y) / deltaTime;
+    float auxCurvatureValue(Vector3 handVel, Vector3 lastHandVel) {
+        float xCurrentAcc = (handVel.x - lastHandVel.x);
+        float yCurrentAcc = (handVel.y - lastHandVel.y);
 
         float top = (handVel.x * yCurrentAcc) - (handVel.y * xCurrentAcc);
         float bottom = Mathf.Pow(handVel.x, 2) + Mathf.Pow(handVel.y, 2);
         float bottomPow = Mathf.Pow(bottom, (3f/2f));
 
         // Limit decimal cases (for example, all x1000). TODO: Find a better alternative
-        float curv = Mathf.Round(top*1000f) / Mathf.Round(bottomPow*1000f);
-        curv = curv / 1000f;
+        float curv = top/bottomPow;
+        // curv = curv / 1000f;
         
         return curv;
     }
@@ -290,9 +321,9 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
         
         if (isAllBoundingComponentsVisible) {
             if ( ! isBoundingTriangleVisible) {
-                UpdateBoundingTrianglePosition();
                 isBoundingTriangleVisible = true; 
             }
+            UpdateBoundingTrianglePosition();
         }
         else if ( ! isAllBoundingComponentsVisible && isBoundingTriangleVisible) {
             isBoundingTriangleVisible = false; 
@@ -304,9 +335,6 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
 	 * Method that draws the bounding triangle accordingly to the current head and hands position
 	 */
     void UpdateBoundingTrianglePosition() {
-        if(!isBoundingTriangleVisible)
-            return; 
-
         Mesh mesh = mBoundingTriangle.GetComponent < MeshFilter > ().mesh; 
         mesh.Clear(); 
         mesh.vertices = new Vector3[] {
