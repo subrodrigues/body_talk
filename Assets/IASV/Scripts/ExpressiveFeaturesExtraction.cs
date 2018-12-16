@@ -95,15 +95,6 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
 
             calcEFEnergy(mDeltaTime);
 
-            // Vector3 leftHandCurrentVel = new Vector3((currentLeftHandPosition.x - mLeftHandObjLastPos.x) / mDeltaTime, 
-            //                                         (currentLeftHandPosition.y - mLeftHandObjLastPos.y) / mDeltaTime,
-            //                                         0);
-            // Vector3 rightHandCurrentVel = new Vector3((currentRightHandPosition.x - mRightHandObjLastPos.x) / mDeltaTime, 
-            //                                         (currentRightHandPosition.y - mRightHandObjLastPos.y) / mDeltaTime,
-            //                                         0);
-
-            // calcEFSmoothness(leftHandCurrentVel, mLeftHandObjLastVelocity, rightHandCurrentVel, mRightHandObjLastVelocity, mDeltaTime);
-
             CalcSISpatial();
 
             CalcBoundingTriangleSpatialExtent();
@@ -147,10 +138,6 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
             }
 
             mDeltaTime = 0;
-
-            // Update last value variables
-            // mLeftHandObjLastVelocity = leftHandCurrentVel;
-            // mRightHandObjLastVelocity = rightHandCurrentVel;
 
             mHeadObjLastPos = mHeadObj.transform.position;
             mLeftHandObjLastPos = mLeftHandObj.transform.position;
@@ -264,28 +251,28 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
         return curvature;
     }
 
-    void calcEFSmoothness(Vector3 leftHandVel, Vector3 leftHandLastVel, Vector3 rightHandVel, Vector3 rightHandLastVel){
-        float leftCurvature = auxCurvatureValue(leftHandVel, leftHandLastVel);
-        float rightCurvature = auxCurvatureValue(rightHandVel, rightHandLastVel);
+    // void calcEFSmoothness(Vector3 leftHandVel, Vector3 leftHandLastVel, Vector3 rightHandVel, Vector3 rightHandLastVel){
+    //     float leftCurvature = auxCurvatureValue(leftHandVel, leftHandLastVel);
+    //     float rightCurvature = auxCurvatureValue(rightHandVel, rightHandLastVel);
 
-        mTotalLeftCurvature += leftCurvature;
-        mTotalRightCurvature += rightCurvature;
-    }
+    //     mTotalLeftCurvature += leftCurvature;
+    //     mTotalRightCurvature += rightCurvature;
+    // }
 
-    float auxCurvatureValue(Vector3 handVel, Vector3 lastHandVel) {
-        float xCurrentAcc = (handVel.x - lastHandVel.x);
-        float yCurrentAcc = (handVel.y - lastHandVel.y);
+    // float auxCurvatureValue(Vector3 handVel, Vector3 lastHandVel) {
+    //     float xCurrentAcc = (handVel.x - lastHandVel.x);
+    //     float yCurrentAcc = (handVel.y - lastHandVel.y);
 
-        float top = (handVel.x * yCurrentAcc) - (handVel.y * xCurrentAcc);
-        float bottom = Mathf.Pow(handVel.x, 2) + Mathf.Pow(handVel.y, 2);
-        float bottomPow = Mathf.Pow(bottom, (3f/2f));
+    //     float top = (handVel.x * yCurrentAcc) - (handVel.y * xCurrentAcc);
+    //     float bottom = Mathf.Pow(handVel.x, 2) + Mathf.Pow(handVel.y, 2);
+    //     float bottomPow = Mathf.Pow(bottom, (3f/2f));
 
-        // Limit decimal cases (for example, all x1000). TODO: Find a better alternative
-        float curv = top/bottomPow;
-        // curv = curv / 1000f;
+    //     // Limit decimal cases (for example, all x1000). TODO: Find a better alternative
+    //     float curv = top/bottomPow;
+    //     // curv = curv / 1000f;
         
-        return curv;
-    }
+    //     return curv;
+    // }
 
     void calcEFEnergy(float deltaTime) {
         float eTotal = (HEAD_MASS * Mathf.Pow(auxLimbVelocity(mHeadObj.transform.position, mHeadObjLastPos, deltaTime), 2) + 
