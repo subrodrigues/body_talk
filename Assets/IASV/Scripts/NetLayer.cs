@@ -15,14 +15,14 @@ public class NetLayer : MonoBehaviour {
 	public static bool trained;
 
 	private int collectedDatasets = 0;
-	private const int maxNumberOfDatasets = 30; // 5 positives, 10 negatives 
+	private const int maxNumberOfDatasets = 30; // 10 neutral, 10 joy, 10 fear
 
 	public ExpressiveFeaturesExtraction mExpressiveFeatures; 
 
 	// Use this for initialization
 	void Start () {
 		//Initialize the network 
-		net = new NeuralNet(7, 8, 1);
+		net = new NeuralNet(2, 3, 2);
 		dataSets = new List<DataSet>();
 	}
 	
@@ -37,30 +37,39 @@ public class NetLayer : MonoBehaviour {
 		// }
 	}
 
-	public void Train(double[] C, double neutralOfJoy){ 
-		// double[] C = {mExpressiveFeatures.mFeatureEnergy, 
-		// 				mExpressiveFeatures.mFeatureSymmetrySpatial,
-		// 				mExpressiveFeatures.mFeatureSymmetrySpread,
-		// 				mExpressiveFeatures.mFeatureSmoothnessLeftHand,
-		// 				mExpressiveFeatures.mFeatureSmoothnessRightHand,
-		// 				mExpressiveFeatures.mFeatureSpatialExtent,
-		// 				mExpressiveFeatures.mFeatureHeadLeaning};
+	public void Train(double joy, double fear){ 
+		double[] C = {(double)mExpressiveFeatures.mFeatureEnergy, 
+						// mExpressiveFeatures.mFeatureSymmetrySpatial,
+						// mExpressiveFeatures.mFeatureSymmetrySpread,
+						// mExpressiveFeatures.mFeatureSmoothnessLeftHand,
+						// mExpressiveFeatures.mFeatureSmoothnessRightHand,
+						(double)mExpressiveFeatures.mFeatureSpatialExtent
+						// mExpressiveFeatures.mFeatureHeadLeaning
+						};
 
-		double[] v = {neutralOfJoy};
+		double[] v = {joy, fear};
 
 		dataSets.Add(new DataSet(C, v));
 
 		collectedDatasets++;
+		
 		if (!trained && collectedDatasets == maxNumberOfDatasets) {
 			print ("Start training of the network."); 
 			TrainNetwork();
+		} else{ // Update emotion to be trained
+			switch(collectedDatasets){
+				case (10):
+				case (20):
+					mExpressiveFeatures.NextEmotion();
+				break;
+			}
 		}
 	}
 
-	public double compute(double[] vals)
+	public double[] compute(double[] vals)
 	{
 		double[] result = net.Compute(vals);
-		return result[0];
+		return result;
 	}
 
 	public static void TrainNetwork()

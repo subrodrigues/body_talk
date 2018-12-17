@@ -2,13 +2,16 @@
 using System.Collections.Generic; 
 using UnityEngine; 
 using TMPro; 
+using System;
 
 public class ExpressiveFeaturesExtraction:MonoBehaviour {
-    // public double JOY_KEY = 0, FEAR_KEY = 1, RELIEF_KEY = 2, SADNESS_KEY = 3, NEUTRAL_KEY = 4;
+    private const int NEUTRAL_KEY = 0, JOY_KEY = 1, FEAR_KEY = 2, RELIEF_KEY = 3, SADNESS_KEY = 4;
     public double mFeatureEnergy = 0, mFeatureSymmetrySpatial = 0, mFeatureSymmetrySpread = 0, mFeatureSmoothnessLeftHand = 0, mFeatureSmoothnessRightHand = 0,
         mFeatureSpatialExtent = 0, mFeatureHeadLeaning = 0;
 
     public NetLayer net;
+
+    public EmotionUpdater mEmotionalBillboard;
 
     private GiftWrappingAlgorithm mGiftWrapping;
 
@@ -28,12 +31,22 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
     private Color32[] mBoundingTriangleColors; 
     private TextMeshProUGUI mEFEnergy, mEFSpatialExtent, mEFLeftCurvature, mEFRightCurvature, mSISpatial, mSISpread, mHeadLeaning; 
     private bool isOdd = true;
-    private bool isNeutral = true;
+    private int mCurrentEmotionTrain = NEUTRAL_KEY;
 
     private float mDeltaTime = 0;
     private int mCurrentFrame = 0;
     private float mETotal = 0.0f, mTotalLeftCurvature = 0.0f, mTotalRightCurvature = 0.0f, mSymmetrySpatial = 0.0f, mTriangleSpatialExtent = 0.0f, mTotalHeadLeaning = 0.0f;
 
+    public void NextEmotion(){
+        switch(mCurrentEmotionTrain){
+            case (NEUTRAL_KEY):
+                mCurrentEmotionTrain = JOY_KEY;
+                break;
+            case (JOY_KEY):
+                mCurrentEmotionTrain = FEAR_KEY;
+            break;
+        }
+    }
     void Start() {
         initialize(); 
         setup(); 
@@ -109,51 +122,48 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
 
             calcHeadLeaning(mDeltaTime);
 
-            // if(mCurrentFrame == 26 && !NetLayer.trained){
-            //     mFeatureEnergy = mETotal / 26.0f;
-            //     mFeatureSymmetrySpatial = mSymmetrySpatial / 26.0f;
-            //     float symmetrySpread = calcSISpread(mLeftHandPositions, mRightHandPositions, 26);
-            //     mFeatureSymmetrySpread = HasValue(symmetrySpread) ? symmetrySpread : 0;
-            //     CalcEFCurvature();
-            //     mFeatureSmoothnessLeftHand = mTotalLeftCurvature;
-            //     mFeatureSmoothnessRightHand = mTotalRightCurvature;
-            //     mFeatureSpatialExtent = mTriangleSpatialExtent / 26.0f;
-            //     mFeatureHeadLeaning = mTotalHeadLeaning / 26.0f;
-
-            //     net.Train(1, 0, 0, 0, 0);
-            // }
-
             if(mCurrentFrame == SLIDING_WINDOW){ // 2 Seconds reached 
-                mFeatureEnergy = mETotal / 50.0f;
-                mFeatureSymmetrySpatial = mSymmetrySpatial / 50.0f;
+                mFeatureEnergy = Math.Round(mETotal / 50.0f, 6);
+                mFeatureSymmetrySpatial = Math.Round(mSymmetrySpatial / 50.0f, 6);
                 float symmetrySpread = calcSISpread(mLeftHandPositions, mRightHandPositions, SLIDING_WINDOW);
-                mFeatureSymmetrySpread = HasValue(symmetrySpread) ? symmetrySpread : 0;
+                mFeatureSymmetrySpread = Math.Round(HasValue(symmetrySpread) ? symmetrySpread : 0, 6);
                 CalcEFCurvature();
-                mFeatureSmoothnessLeftHand = mTotalLeftCurvature;
-                mFeatureSmoothnessRightHand = mTotalRightCurvature;
-                mFeatureSpatialExtent = mTriangleSpatialExtent / 50.0f;
-                mFeatureHeadLeaning = mTotalHeadLeaning / 50.0f;
-
-                double[] C = {mFeatureEnergy, 
-                                mFeatureSymmetrySpatial,
-                                mFeatureSymmetrySpread,
-                                mFeatureSmoothnessLeftHand,
-                                mFeatureSmoothnessRightHand,
-                                mFeatureSpatialExtent,
-                                mFeatureHeadLeaning};
+                mFeatureSmoothnessLeftHand = Math.Round(mTotalLeftCurvature, 6);
+                mFeatureSmoothnessRightHand = Math.Round(mTotalRightCurvature, 6);
+                mFeatureSpatialExtent = Math.Round(mTriangleSpatialExtent / 50.0f, 6);
+                mFeatureHeadLeaning = Math.Round(mTotalHeadLeaning / 50.0f, 6);
 
                 // Training
                 if(!NetLayer.trained){
-                    if(isNeutral)
-                        net.Train(C, 0);
-                    else
-                        net.Train(C, 1);
-                    
-                    isNeutral = !isNeutral;
-                }
-                else{
-                    double result = net.compute (C);
-                    Debug.Log("NEUTRAL: " + result);
+                    switch(mCurrentEmotionTrain){
+                        case(NEUTRAL_KEY):
+                            net.Train(0.0d, 0.0d);
+                            break;
+                        case(JOY_KEY):
+                            net.Train(1.0d, 0.0d);
+                            break;
+                       case(FEAR_KEY):
+                            net.Train(0.0d, 1.0d);
+                            break;
+                    }
+                } else{
+                    double[] C = {(double)mFeatureEnergy, 
+                                    // mFeatureSymmetrySpatial,
+                                    // mFeatureSymmetrySpread,
+                                    // mFeatureSmoothnessLeftHand,
+                                    // mFeatureSmoothnessRightHand,
+                                    (double)mFeatureSpatialExtent
+                                    // mFeatureHeadLeaning
+                                    };
+                    double[] result = net.compute (C);
+                    if(result[0] < 0.5 && result[1] < 0.5){
+                        mEmotionalBillboard.SetEmotion(NEUTRAL_KEY);
+                    } else if(result[0] > result[1]){
+                        mEmotionalBillboard.SetEmotion(JOY_KEY);
+                    } else{
+                        mEmotionalBillboard.SetEmotion(FEAR_KEY);
+                    }
+                    Debug.Log("JOY: " + result[0] + " - FEAR: " + result[1]);
                 }
 
                 // Energy ammount
@@ -181,10 +191,17 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
                 mCurrentFrame = 0;
 
                 if(!NetLayer.trained){
-                    if(isNeutral)
-                        Debug.Log("TRAIN NEUTRAL");
-                    else
-                        Debug.Log("TRAIN JOY");
+                    switch(mCurrentEmotionTrain){
+                        case(NEUTRAL_KEY):
+                            Debug.Log("TRAIN NEUTRAL");
+                            break;
+                        case(JOY_KEY):
+                            Debug.Log("TRAIN JOY");
+                            break;
+                       case(FEAR_KEY):
+                            Debug.Log("TRAIN FEAR");
+                            break;                        
+                    }
                 }
             } else{
                 mLeftHandPositions[mCurrentFrame] = currentLeftHandPosition;
