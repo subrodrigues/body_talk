@@ -54,8 +54,8 @@ namespace NeuralNetwork
 			var error = 1.0;
 			var numEpochs = 0;
 
-			while (error > minimumError && numEpochs < int.MaxValue)
-			{
+			while (error > minimumError && numEpochs < 150000) // numEpochs = int.MaxValue. 150000 = ~60sec
+			{				
 				var errors = new List<double>();
 				foreach (var dataSet in dataSets)
 				{

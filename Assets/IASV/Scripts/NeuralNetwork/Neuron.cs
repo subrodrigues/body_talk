@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 namespace NeuralNetwork
 {
@@ -93,7 +94,8 @@ namespace NeuralNetwork
 		}
 	}
 
-	public class DataSet
+[Serializable]
+public class DataSet
 	{
 		public double[] Values { get; set; }
 		public double[] Targets { get; set; }

@@ -4,7 +4,7 @@ using UnityEngine;
 using NeuralNetwork;
 using UnityEngine.UI;
 using System.Threading;
-
+using BodyTalkStorage;
 public class NetLayer : MonoBehaviour {
 
 	//Neural Network Variables
@@ -23,7 +23,13 @@ public class NetLayer : MonoBehaviour {
 	void Start () {
 		//Initialize the network 
 		net = new NeuralNet(2, 3, 2);
-		dataSets = new List<DataSet>();
+		
+		dataSets = (List<DataSet>) StorageHandler.LoadData("saved_data");
+		if(dataSets == null){
+			dataSets = new List<DataSet>();
+		} else{
+			collectedDatasets = maxNumberOfDatasets;
+		}
 	}
 	
 	// Update is called once per frame
@@ -55,6 +61,9 @@ public class NetLayer : MonoBehaviour {
 		
 		if (!trained && collectedDatasets == maxNumberOfDatasets) {
 			print ("Start training of the network."); 
+
+			StorageHandler.SaveData(dataSets, "saved_data");
+
 			TrainNetwork();
 		} else{ // Update emotion to be trained
 			switch(collectedDatasets){
@@ -77,5 +86,9 @@ public class NetLayer : MonoBehaviour {
 		net.Train(dataSets, MinimumError);
 		trained = true;
 		print ("Trained!"); 
+	}
+
+	public void DeleteDatabase(){
+		StorageHandler.DeleteFile("saved_data");
 	}
 }
