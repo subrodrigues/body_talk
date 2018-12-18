@@ -132,8 +132,8 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
                 float symmetrySpread = calcSISpread(mLeftHandPositions, mRightHandPositions, SLIDING_WINDOW);
                 mFeatureSymmetrySpread = Math.Round(HasValue(symmetrySpread) ? symmetrySpread : 0, 6);
                 CalcEFCurvature();
-                mFeatureSmoothnessLeftHand = Math.Round(mTotalLeftCurvature, 6);
-                mFeatureSmoothnessRightHand = Math.Round(mTotalRightCurvature, 6);
+                mFeatureSmoothnessLeftHand = Math.Round(mTotalLeftCurvature / 50.0f, 6);
+                mFeatureSmoothnessRightHand = Math.Round(mTotalRightCurvature / 50.0f, 6);
                 mFeatureSpatialExtent = Math.Round(mTriangleSpatialExtent / 50.0f, 6);
                 mFeatureHeadLeaning = Math.Round(mTotalHeadLeaning / 50.0f, 6);
 
@@ -152,12 +152,12 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
                     }
                 } else{
                     double[] C = {(double)mFeatureEnergy, 
-                                    // mFeatureSymmetrySpatial,
-                                    // mFeatureSymmetrySpread,
-                                    // mFeatureSmoothnessLeftHand,
-                                    // mFeatureSmoothnessRightHand,
-                                    (double)mFeatureSpatialExtent
-                                    // mFeatureHeadLeaning
+                                    (double) mFeatureSymmetrySpatial,
+                                    (double) mFeatureSymmetrySpread,
+                                    // (double) mFeatureSmoothnessLeftHand,
+                                    // (double) mFeatureSmoothnessRightHand,
+                                    (double) mFeatureSpatialExtent,
+                                    (double) mFeatureHeadLeaning
                                     };
                     double[] result = net.compute (C);
                     if(result[0] < 0.5 && result[1] < 0.5){
@@ -167,7 +167,7 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
                     } else{
                         mEmotionalBillboard.SetEmotion(FEAR_KEY);
                     }
-                    Debug.Log("JOY: " + result[0] + " - FEAR: " + result[1]);
+                    // Debug.Log("JOY: " + result[0] + " - FEAR: " + result[1]);
                 }
 
                 // Energy ammount
@@ -307,13 +307,14 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
         for(int i = 2; i < mLeftHandPositions.Length; i+= 3){
             leftCurvature += CalcCurvatureAux(mLeftHandPositions[i-1], mLeftHandPositions[i], mLeftHandPositions[i+1]);
         }
-        mTotalLeftCurvature = leftCurvature;
+        mTotalLeftCurvature = HasValue(leftCurvature) ? leftCurvature : 0.0f;
 
         float rightCurvature = 0.0f;
         for(int i = 2; i < mRightHandPositions.Length; i+= 3){
             rightCurvature += CalcCurvatureAux(mRightHandPositions[i-1], mRightHandPositions[i], mRightHandPositions[i+1]);
         }
-        mTotalRightCurvature = rightCurvature;    
+        
+        mTotalRightCurvature = HasValue(rightCurvature) ? rightCurvature : 0.0f;    
     }
 
     float CalcCurvatureAux(Vector3 xMinus, Vector3 x, Vector3 xPlus){

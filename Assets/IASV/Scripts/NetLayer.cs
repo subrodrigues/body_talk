@@ -22,7 +22,7 @@ public class NetLayer : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		//Initialize the network 
-		net = new NeuralNet(2, 3, 2);
+		net = new NeuralNet(5, 6, 2);
 		
 		dataSets = (List<DataSet>) StorageHandler.LoadData("saved_data");
 		if(dataSets == null){
@@ -45,12 +45,12 @@ public class NetLayer : MonoBehaviour {
 
 	public void Train(double joy, double fear){ 
 		double[] C = {(double)mExpressiveFeatures.mFeatureEnergy, 
-						// mExpressiveFeatures.mFeatureSymmetrySpatial,
-						// mExpressiveFeatures.mFeatureSymmetrySpread,
-						// mExpressiveFeatures.mFeatureSmoothnessLeftHand,
-						// mExpressiveFeatures.mFeatureSmoothnessRightHand,
-						(double)mExpressiveFeatures.mFeatureSpatialExtent
-						// mExpressiveFeatures.mFeatureHeadLeaning
+						(double) mExpressiveFeatures.mFeatureSymmetrySpatial,
+						(double) mExpressiveFeatures.mFeatureSymmetrySpread,
+						// (double) mExpressiveFeatures.mFeatureSmoothnessLeftHand,
+						// (double) mExpressiveFeatures.mFeatureSmoothnessRightHand,
+						(double) mExpressiveFeatures.mFeatureSpatialExtent,
+						(double) mExpressiveFeatures.mFeatureHeadLeaning
 						};
 
 		double[] v = {joy, fear};
@@ -59,7 +59,7 @@ public class NetLayer : MonoBehaviour {
 
 		collectedDatasets++;
 		
-		if (!trained && collectedDatasets == maxNumberOfDatasets) {
+		if (!trained && collectedDatasets >= maxNumberOfDatasets) {
 			print ("Start training of the network."); 
 
 			StorageHandler.SaveData(dataSets, "saved_data");
