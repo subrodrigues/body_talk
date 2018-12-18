@@ -29,7 +29,7 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
     
     // Rending variables
     private Color32[] mBoundingTriangleColors; 
-    private TextMeshProUGUI mEFEnergy, mEFSpatialExtent, mEFLeftCurvature, mEFRightCurvature, mSISpatial, mSISpread, mHeadLeaning; 
+    private TextMeshProUGUI mEFEnergy, mEFSpatialExtent, mEFLeftCurvature, mEFRightCurvature, mSISpatial, mSISpread, mHeadLeaning, mTrainingStatus; 
     private bool isOdd = true;
     private int mCurrentEmotionTrain = NEUTRAL_KEY;
 
@@ -40,9 +40,11 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
     public void NextEmotion(){
         switch(mCurrentEmotionTrain){
             case (NEUTRAL_KEY):
+                mTrainingStatus.text = "Joy";
                 mCurrentEmotionTrain = JOY_KEY;
                 break;
             case (JOY_KEY):
+                mTrainingStatus.text = "Fear";
                 mCurrentEmotionTrain = FEAR_KEY;
             break;
         }
@@ -68,6 +70,7 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
         mSISpatial = GameObject.FindWithTag("EFSISpatial").GetComponent < TextMeshProUGUI > (); 
         mSISpread = GameObject.FindWithTag("EFSISpread").GetComponent < TextMeshProUGUI > (); 
         mHeadLeaning = GameObject.FindWithTag("EFHeadLeaning").GetComponent < TextMeshProUGUI > (); 
+        mTrainingStatus = GameObject.FindWithTag("TrainingStatus").GetComponent < TextMeshProUGUI > (); 
 
         // Variables to calculate Energy
         mHeadObjLastPos = new Vector3(0, 0, 0);
@@ -151,6 +154,10 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
                             break;
                     }
                 } else{
+                    if(mTrainingStatus.text != "Trained"){
+                        mTrainingStatus.text = "Trained";
+                    }
+
                     double[] C = {(double)mFeatureEnergy, 
                                     (double) mFeatureSymmetrySpatial,
                                     (double) mFeatureSymmetrySpread,
@@ -313,7 +320,7 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
         for(int i = 2; i < mRightHandPositions.Length; i+= 3){
             rightCurvature += CalcCurvatureAux(mRightHandPositions[i-1], mRightHandPositions[i], mRightHandPositions[i+1]);
         }
-        
+
         mTotalRightCurvature = HasValue(rightCurvature) ? rightCurvature : 0.0f;    
     }
 
@@ -412,7 +419,9 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
         mesh.triangles = new int[] {0, 1, 2 }; 
 
         mesh.colors32 = mBoundingTriangleColors; 
-        
+
+        Renderer r=mBoundingTriangle.GetComponent<Renderer>();
+        r.enabled = false;
     }
 
     /**

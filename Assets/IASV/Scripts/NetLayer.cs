@@ -24,7 +24,7 @@ public class NetLayer : MonoBehaviour {
 		//Initialize the network 
 		net = new NeuralNet(5, 6, 2);
 		
-		dataSets = (List<DataSet>) StorageHandler.LoadData("saved_data");
+		dataSets = (List<DataSet>) StorageHandler.LoadData("new_expressions_data"); // latest: "saved_Data"
 		if(dataSets == null){
 			dataSets = new List<DataSet>();
 		} else{
@@ -62,7 +62,7 @@ public class NetLayer : MonoBehaviour {
 		if (!trained && collectedDatasets >= maxNumberOfDatasets) {
 			print ("Start training of the network."); 
 
-			StorageHandler.SaveData(dataSets, "saved_data");
+			StorageHandler.SaveData(dataSets, "new_expressions_data");
 
 			TrainNetwork();
 		} else{ // Update emotion to be trained
@@ -89,6 +89,6 @@ public class NetLayer : MonoBehaviour {
 	}
 
 	public void DeleteDatabase(){
-		StorageHandler.DeleteFile("saved_data");
+		StorageHandler.DeleteFile("new_expressions_data");
 	}
 }
