@@ -421,7 +421,7 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
         mesh.colors32 = mBoundingTriangleColors; 
 
         Renderer r=mBoundingTriangle.GetComponent<Renderer>();
-        r.enabled = false;
+        // r.enabled = false;
     }
 
     /**
