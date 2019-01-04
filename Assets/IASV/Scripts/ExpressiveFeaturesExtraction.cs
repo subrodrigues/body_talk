@@ -5,7 +5,7 @@ using TMPro;
 using System;
 
 public class ExpressiveFeaturesExtraction:MonoBehaviour {
-    private const int NEUTRAL_KEY = 0, JOY_KEY = 1, FEAR_KEY = 2, RELIEF_KEY = 3, SADNESS_KEY = 4;
+    private const int NEUTRAL_KEY = 0, JOY_KEY = 1, FEAR_KEY = 2, ANGER_KEY = 3, SADNESS_KEY = 4;
     public double mFeatureEnergy = 0, mFeatureSymmetrySpatial = 0, mFeatureSymmetrySpread = 0, mFeatureSmoothnessLeftHand = 0, mFeatureSmoothnessRightHand = 0,
         mFeatureSpatialExtent = 0, mFeatureHeadLeaning = 0;
 
@@ -46,7 +46,15 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
             case (JOY_KEY):
                 mTrainingStatus.text = "Fear";
                 mCurrentEmotionTrain = FEAR_KEY;
-            break;
+                break;
+            case (FEAR_KEY):
+                mTrainingStatus.text = "Anger";
+                mCurrentEmotionTrain = ANGER_KEY;
+                break;
+            case (ANGER_KEY):
+                mTrainingStatus.text = "Sadness";
+                mCurrentEmotionTrain = SADNESS_KEY;
+                break;
         }
     }
     void Start() {
@@ -144,13 +152,19 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
                 if(!NetLayer.trained){
                     switch(mCurrentEmotionTrain){
                         case(NEUTRAL_KEY):
-                            net.Train(0.0d, 0.0d);
+                            net.Train(0.0d, 0.0d, 0.0d, 0.0d);
                             break;
                         case(JOY_KEY):
-                            net.Train(1.0d, 0.0d);
+                            net.Train(1.0d, 0.0d, 0.0d, 0.0d);
                             break;
                        case(FEAR_KEY):
-                            net.Train(0.0d, 1.0d);
+                            net.Train(0.0d, 1.0d, 0.0d, 0.0d);
+                            break;
+                        case (ANGER_KEY):
+                            net.Train(0.0d, 0.0d, 1.0d, 0.0d);
+                            break;
+                        case (SADNESS_KEY):
+                            net.Train(0.0d, 0.0d, 0.0d, 1.0d);
                             break;
                     }
                 } else{
@@ -167,14 +181,9 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
                                     (double) mFeatureHeadLeaning
                                     };
                     double[] result = net.compute (C);
-                    if(result[0] < 0.5 && result[1] < 0.5){
-                        mEmotionalBillboard.SetEmotion(NEUTRAL_KEY);
-                    } else if(result[0] > result[1]){
-                        mEmotionalBillboard.SetEmotion(JOY_KEY);
-                    } else{
-                        mEmotionalBillboard.SetEmotion(FEAR_KEY);
-                    }
-                    // Debug.Log("JOY: " + result[0] + " - FEAR: " + result[1]);
+
+                    int emotion = GetCurrentEmotion(result);
+                    mEmotionalBillboard.SetEmotion(emotion);
                 }
 
                 // Energy ammount
@@ -201,19 +210,19 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
 
                 mCurrentFrame = 0;
 
-                if(!NetLayer.trained){
-                    switch(mCurrentEmotionTrain){
-                        case(NEUTRAL_KEY):
-                            Debug.Log("TRAIN NEUTRAL");
-                            break;
-                        case(JOY_KEY):
-                            Debug.Log("TRAIN JOY");
-                            break;
-                       case(FEAR_KEY):
-                            Debug.Log("TRAIN FEAR");
-                            break;                        
-                    }
-                }
+                //if(!NetLayer.trained){
+                //    switch(mCurrentEmotionTrain){
+                //        case(NEUTRAL_KEY):
+                //            Debug.Log("TRAIN NEUTRAL");
+                //            break;
+                //        case(JOY_KEY):
+                //            Debug.Log("TRAIN JOY");
+                //            break;
+                //       case(FEAR_KEY):
+                //            Debug.Log("TRAIN FEAR");
+                //            break;                        
+                //    }
+                //}
             } else{
                 mLeftHandPositions[mCurrentFrame] = currentLeftHandPosition;
                 mRightHandPositions[mCurrentFrame] = currentRightHandPosition;
@@ -227,6 +236,29 @@ public class ExpressiveFeaturesExtraction:MonoBehaviour {
         }
 
         isOdd = !isOdd;
+    }
+
+    /**
+     * Method that receives the array from the neural net and returns the current detected emotion
+     * param name="dnnResult" - is the result received from the neural net
+     */
+    int GetCurrentEmotion(double[] dnnResult) {
+        if (dnnResult[0] < 0.5 && dnnResult[1] < 0.5 && dnnResult[2] < 0.5 && dnnResult[3] < 0.5)
+        {
+            return NEUTRAL_KEY;
+        }
+        else {
+            double max = 0.0f;
+            int keyValue = NEUTRAL_KEY;
+            for (int i = 0; i < dnnResult.Length; i++) {
+                if (dnnResult[i] > max)
+                {
+                    max = dnnResult[i];
+                    keyValue = i;
+                }
+            }
+            return keyValue;
+        }
     }
 
     void CalcBoundingTriangleSpatialExtent(){

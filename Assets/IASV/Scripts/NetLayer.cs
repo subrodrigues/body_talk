@@ -15,14 +15,14 @@ public class NetLayer : MonoBehaviour {
 	public static bool trained;
 
 	private int collectedDatasets = 0;
-	private const int maxNumberOfDatasets = 30; // 10 neutral, 10 joy, 10 fear
+	private const int maxNumberOfDatasets = 50; // 10 neutral, 10 joy, 10 fear, 10 anger, 10 sadness
 
 	public ExpressiveFeaturesExtraction mExpressiveFeatures; 
 
 	// Use this for initialization
 	void Start () {
 		//Initialize the network 
-		net = new NeuralNet(5, 6, 2);
+		net = new NeuralNet(5, 6, 4);
 		
 		dataSets = (List<DataSet>) StorageHandler.LoadData("new_expressions_data"); // latest: "saved_Data"
 		if(dataSets == null){
@@ -43,7 +43,7 @@ public class NetLayer : MonoBehaviour {
 		// }
 	}
 
-	public void Train(double joy, double fear){ 
+	public void Train(double joy, double fear, double anger, double sadness){ 
 		double[] C = {(double)mExpressiveFeatures.mFeatureEnergy, 
 						(double) mExpressiveFeatures.mFeatureSymmetrySpatial,
 						(double) mExpressiveFeatures.mFeatureSymmetrySpread,
@@ -69,7 +69,9 @@ public class NetLayer : MonoBehaviour {
 			switch(collectedDatasets){
 				case (10):
 				case (20):
-					mExpressiveFeatures.NextEmotion();
+                case (30):
+                case (40):
+                    mExpressiveFeatures.NextEmotion();
 				break;
 			}
 		}
